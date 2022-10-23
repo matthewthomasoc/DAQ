@@ -16,6 +16,7 @@ cmds = [
 def main():
     initLogger(format='[ %(asctime)s %(funcName)20s() ] %(message)s')
     DAQ = daq.DAQ(logger)
+    DAQ.loadConfig('cfg/config.ini')
     DAQ.initI2C()
     DAQ.initSensors()
     DAQ.sendCommandToGPS(cmds)

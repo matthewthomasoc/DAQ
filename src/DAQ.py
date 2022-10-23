@@ -1,5 +1,5 @@
 # Dependencies
-import board, smbus, serial
+import board, smbus, serial, configparser
 from easydict import EasyDict as edict
 
 # Sensor libraries
@@ -18,42 +18,48 @@ class DAQ():
         self.bus = smbus.SMBus(1)
         self.logger.debug("Successfully initialized I2C bus")
     
+    def loadConfig(self, path):
+        self.cfg = configparser.ConfigParser()
+
+        self.cfg.read(path)
+
     def initSensors(self):
         self.logger.debug("Initializing BMP280")
-        self.initBMP280()
+        self.initBMP280(self.cfg['BMP280'])
 
         self.logger.debug("Initializing MPU9250")
-        self.initMPU9250()
+        self.initMPU9250(self.cfg['MPU9250'])
 
-        self.logger.debug("Initializing NEO6M")
-        self.initNEO6M()
+        #self.logger.debug("Initializing NEO6M")
+        #self.initNEO6M(self.cfg['NEO6M'])
     
-    def initBMP280(self):
+    def initBMP280(self, cfg):
         try:
             self.Sensors.bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(board.I2C())
+            self.Sensors.bmp280.sea_level_pressure = cfg['SEALEVEL_PA']
         except Exception as ex:
             self.logger.debug("Failure while initializing BMP280!")
             raise ex
 
-    def initMPU9250(self):
+    def initMPU9250(self, cfg):
         try:
             self.Sensors.imu = MPU9250(
-                    address_ak=AK8963_ADDRESS, 
-                    address_mpu_master=MPU9050_ADDRESS_68, # 0x68 Address
-                    address_mpu_slave=None, 
+                    address_ak=eval(cfg['ADDRESS_AK']), 
+                    address_mpu_master=eval(cfg['ADDRESS_MASTER']), # 0x68 Address
+                    address_mpu_slave=eval(cfg['ADDRESS_SLAVE']), 
                     bus=1,
-                    gfs=GFS_2000, 
-                    afs=AFS_16G, 
-                    mfs=AK8963_BIT_16, 
-                    mode=AK8963_MODE_C100HZ)
+                    gfs=eval(cfg['GFS']),
+                    afs=eval(cfg['AFS']),
+                    mfs=eval(cfg['MFS']),
+                    mode=eval(cfg['MODE']))
             self.Sensors.imu.configure() # Apply the settings to the registers
         except Exception as ex:
             self.logger.debug("Failure while initializing MPU9250!")
             raise ex
 
-    def initNEO6M(self):
+    def initNEO6M(self, cfg):
         port = "/dev/ttyAMA0"
-        self.Sensors.gps = serial.Serial(port, baudrate=9600, timeout=0.5)
+        #self.Sensors.gps = 
 
     def getAccel(self):
         return self.Sensors.imu.readAccelerometerMaster()
@@ -75,6 +81,10 @@ class DAQ():
     
     def sendCommandToGPS(self, cmd):
         self.Sensors.gps.write(serial.to_bytes(cmd))
+
+# class NEO6M():
+#     def __init__(self, port):
+#         self.serial = serial.Serial(port, baudrate=9600, timeout=0.5)
 
 # Notes
 # GPS NMEA sentences
